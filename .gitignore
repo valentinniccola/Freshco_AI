@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Environment variables & secrets
+.env
+!.env.example
+
+# Local Databases & Logs
+*.db
+*.sqlite
+*.sqlite3
+*.log
+food_type_training_log.txt
+training_log.txt
+
+# OS & IDE files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# Build outputs & caches
+dist/
+build/
+.cache/
+.pytest_cache/
+
+# Large raw training datasets (handled via download scripts or external cloud storage)
+dataset/
+dataset_raw/
+
+# Zip packages
+Freshco_AI.zip
