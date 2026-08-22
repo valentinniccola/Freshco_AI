@@ -1,10 +1,10 @@
 import React from 'react';
-import { Leaf, Scan, History, Cpu, User, LogOut, ShieldCheck, BarChart3, Sun, Moon } from 'lucide-react';
+import { Leaf, Scan, History, Cpu, User, LogOut, ShieldCheck, BarChart3, Sun, Moon, Shield } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 
 const Navbar = ({ activeTab, setActiveTab }) => {
-  const { user, logout, openAuth } = useAuth();
+  const { user, isAdmin, logout, openAuth } = useAuth();
   const { isDark, toggleTheme } = useTheme();
 
   return (
@@ -27,7 +27,7 @@ const Navbar = ({ activeTab, setActiveTab }) => {
                 Freshco<span className="text-emerald-500 dark:text-emerald-400">AI</span>
               </span>
               <span className="text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                v1.1
+                v1.2
               </span>
             </div>
             <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium hidden sm:block">
@@ -86,6 +86,21 @@ const Navbar = ({ activeTab, setActiveTab }) => {
             <span className="hidden md:inline">AI Architecture</span>
             <span className="md:hidden">AI</span>
           </button>
+
+          {/* Admin Tab: Rendered EXCLUSIVELY if user.role === 'admin' */}
+          {isAdmin && (
+            <button
+              onClick={() => setActiveTab('admin')}
+              className={`flex items-center space-x-1.5 px-3 sm:px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${
+                activeTab === 'admin'
+                  ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30 font-semibold'
+                  : 'text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950/40'
+              }`}
+            >
+              <Shield className="w-4 h-4" />
+              <span>Admin</span>
+            </button>
+          )}
         </nav>
 
         {/* Right Section: Theme Toggle & User Auth */}
@@ -108,11 +123,15 @@ const Navbar = ({ activeTab, setActiveTab }) => {
             <div className="flex items-center space-x-2.5">
               <div className="hidden md:flex flex-col items-end">
                 <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">{user.username}</span>
-                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                  <ShieldCheck className="w-3 h-3" /> Authenticated
+                <span className={`text-[10px] flex items-center gap-1 font-bold ${isAdmin ? 'text-purple-600 dark:text-purple-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                  <ShieldCheck className="w-3 h-3" /> {isAdmin ? 'Admin' : 'Authenticated'}
                 </span>
               </div>
-              <div className="w-9 h-9 rounded-full bg-emerald-500/15 dark:bg-emerald-500/20 border border-emerald-500/30 dark:border-emerald-500/40 flex items-center justify-center text-emerald-600 dark:text-emerald-400 font-bold text-sm">
+              <div className={`w-9 h-9 rounded-full border flex items-center justify-center font-bold text-sm ${
+                isAdmin 
+                  ? 'bg-purple-500/20 border-purple-500/40 text-purple-600 dark:text-purple-300' 
+                  : 'bg-emerald-500/15 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
+              }`}>
                 {user.username.charAt(0).toUpperCase()}
               </div>
               <button

@@ -2,49 +2,115 @@ import sys
 import sqlite3
 from pathlib import Path
 
-# Add backend directory to sys.path
+try:
+    sys.stdout.reconfigure(encoding='utf-8')
+except Exception:
+    pass
+
 backend_dir = Path(__file__).resolve().parent.parent
 if str(backend_dir) not in sys.path:
     sys.path.insert(0, str(backend_dir))
 
-from config import BASE_DIR, settings
-from database import engine, Base
-import models
+from config import settings
 
 def run_migrations():
     """
-    Applies database schema migrations safely without data loss:
-    1. Adds phone_number column to users table if missing.
-    2. Creates password_reset_codes table if missing.
+    Non-destructive SQLite Database Migration:
+    Adds role, is_active, and last_login to users table.
+    Creates admin_logs and agent_recipe_logs tables.
+    Promotes default developer account to admin if present.
     """
-    print("[Migration] Starting database migration check...")
-
-    db_path = BASE_DIR / "freshco.db"
+    db_path = Path(settings.DATABASE_URL.replace("sqlite:///", ""))
     
-    # 1. Direct SQLite column check for users table
-    if db_path.exists():
-        conn = sqlite3.connect(str(db_path))
-        cursor = conn.cursor()
-        
-        # Check if users table exists
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='users';")
-        if cursor.fetchone():
-            cursor.execute("PRAGMA table_info(users);")
-            columns = [col[1] for col in cursor.fetchall()]
-            
-            if "phone_number" not in columns:
-                print("[Migration] Adding 'phone_number' column to 'users' table...")
-                cursor.execute("ALTER TABLE users ADD COLUMN phone_number VARCHAR(25);")
-                conn.commit()
-                print("[Migration] 'phone_number' column added successfully.")
-            else:
-                print("[Migration] 'phone_number' column already exists in 'users' table.")
-        
-        conn.close()
+    if not db_path.exists():
+        print(f"[Migration] Database file will be created on startup.")
+        return
 
-    # 2. Create any missing tables (e.g. password_reset_codes)
-    Base.metadata.create_all(bind=engine)
-    print("[Migration] All database tables synced and verified successfully.")
+    print(f"[Migration] Inspecting database schema...")
+    conn = sqlite3.connect(str(db_path))
+    cursor = conn.cursor()
+
+    try:
+        # 1. Check existing columns in 'users' table
+        cursor.execute("PRAGMA table_info(users)")
+        columns = [row[1] for row in cursor.fetchall()]
+        
+        if "phone_number" not in columns:
+            print("[Migration] Adding 'phone_number' column to 'users' table...")
+            cursor.execute("ALTER TABLE users ADD COLUMN phone_number VARCHAR(25) NULL")
+
+        if "role" not in columns:
+            print("[Migration] Adding 'role' column to 'users' table...")
+            cursor.execute("ALTER TABLE users ADD COLUMN role VARCHAR(20) DEFAULT 'user' NOT NULL")
+
+        if "is_active" not in columns:
+            print("[Migration] Adding 'is_active' column to 'users' table...")
+            cursor.execute("ALTER TABLE users ADD COLUMN is_active BOOLEAN DEFAULT 1 NOT NULL")
+
+        if "last_login" not in columns:
+            print("[Migration] Adding 'last_login' column to 'users' table...")
+            cursor.execute("ALTER TABLE users ADD COLUMN last_login DATETIME NULL")
+
+        # 2. Check 'password_reset_codes' table
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='password_reset_codes'")
+        if not cursor.fetchone():
+            print("[Migration] Creating 'password_reset_codes' table...")
+            cursor.execute("""
+                CREATE TABLE password_reset_codes (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    email VARCHAR(100) NOT NULL,
+                    code VARCHAR(6) NOT NULL,
+                    expires_at DATETIME NOT NULL,
+                    used BOOLEAN DEFAULT 0 NOT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            cursor.execute("CREATE INDEX IF NOT EXISTS ix_password_reset_codes_email ON password_reset_codes (email)")
+
+        # 3. Check 'admin_logs' table
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='admin_logs'")
+        if not cursor.fetchone():
+            print("[Migration] Creating 'admin_logs' table...")
+            cursor.execute("""
+                CREATE TABLE admin_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    admin_id INTEGER NOT NULL REFERENCES users(id),
+                    action VARCHAR(50) NOT NULL,
+                    target_user_id INTEGER REFERENCES users(id),
+                    details TEXT,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
+        # 4. Check 'agent_recipe_logs' table
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='agent_recipe_logs'")
+        if not cursor.fetchone():
+            print("[Migration] Creating 'agent_recipe_logs' table...")
+            cursor.execute("""
+                CREATE TABLE agent_recipe_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL REFERENCES users(id),
+                    ingredients_used TEXT NOT NULL,
+                    recipe_title VARCHAR(100) NOT NULL,
+                    recipe_json TEXT NOT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
+        # 5. Automatically promote primary developer account to admin if exists
+        cursor.execute("UPDATE users SET role = 'admin' WHERE email = 'valentinniccola@gmail.com' OR username = 'valentin'")
+        if cursor.rowcount > 0:
+            print(f"[Migration] Promoted {cursor.rowcount} developer user(s) to 'admin' role.")
+
+        conn.commit()
+        print("[Migration] All database tables and columns synced successfully.")
+
+    except Exception as e:
+        conn.rollback()
+        print(f"[Migration] Migration error: {e}")
+        raise e
+    finally:
+        conn.close()
 
 if __name__ == "__main__":
     run_migrations()

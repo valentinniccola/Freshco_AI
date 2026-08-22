@@ -86,6 +86,7 @@ export const AuthProvider = ({ children }) => {
       value={{
         user,
         token,
+        isAdmin: user?.role === 'admin',
         loading,
         login,
         register,

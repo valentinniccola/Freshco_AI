@@ -3,7 +3,10 @@ from datetime import datetime
 from typing import Optional, Dict, Any, List
 from pydantic import BaseModel, EmailStr, field_validator
 
-# Auth Schemas
+# ==============================================================================
+# AUTH & USER SCHEMAS
+# ==============================================================================
+
 class UserCreate(BaseModel):
     username: str
     email: EmailStr
@@ -28,6 +31,9 @@ class UserOut(BaseModel):
     username: str
     email: EmailStr
     phone_number: Optional[str] = None
+    role: str = "user"
+    is_active: bool = True
+    last_login: Optional[datetime] = None
     created_at: datetime
 
     class Config:
@@ -41,8 +47,12 @@ class Token(BaseModel):
 class TokenData(BaseModel):
     user_id: Optional[int] = None
     username: Optional[str] = None
+    role: Optional[str] = None
 
-# Password Reset Schemas
+# ==============================================================================
+# PASSWORD RESET SCHEMAS
+# ==============================================================================
+
 class ForgotPasswordRequest(BaseModel):
     email: EmailStr
 
@@ -79,8 +89,79 @@ class PasswordResetResponse(BaseModel):
     message: str
     email: Optional[str] = None
 
+# ==============================================================================
+# ADMIN DASHBOARD SCHEMAS
+# ==============================================================================
 
-# AI & Prediction Schemas
+class AdminStatsResponse(BaseModel):
+    total_users: int
+    active_users: int
+    disabled_users: int
+    total_scans_platform: int
+    platform_fresh_pct: float
+    platform_nearly_spoiled_pct: float
+    platform_spoiled_pct: float
+    total_waste_prevented_est: int
+
+class AdminUserSummary(BaseModel):
+    id: int
+    username: str
+    email: str
+    phone_number: Optional[str] = None
+    role: str
+    is_active: bool
+    created_at: datetime
+    last_login: Optional[datetime] = None
+    total_scans: int
+
+    class Config:
+        from_attributes = True
+
+class AdminUserStatusUpdateRequest(BaseModel):
+    is_active: bool
+    reason: Optional[str] = None
+
+class AdminLogResponse(BaseModel):
+    id: int
+    admin_id: int
+    admin_username: str
+    action: str
+    target_user_id: Optional[int] = None
+    target_username: Optional[str] = None
+    details: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+# ==============================================================================
+# AGENTIC MULTI-ITEM RECIPE SCHEMAS
+# ==============================================================================
+
+class UsedIngredientItem(BaseModel):
+    food_type: str
+    scan_id: Optional[int] = None
+    freshness: str = "Nearly Spoiled"
+    reason: str
+
+class AgentRecipeResponse(BaseModel):
+    recipe_title: str
+    tagline: str
+    prep_time: str
+    cook_time: str
+    difficulty: str
+    used_ingredients: List[UsedIngredientItem]
+    pantry_staples_needed: List[str]
+    instructions: List[str]
+    chef_zero_waste_tip: str
+    items_rescued_count: int
+    is_agentic: bool = True
+    calls_remaining_today: int = 5
+
+# ==============================================================================
+# AI & PREDICTION SCHEMAS
+# ==============================================================================
+
 class DefectMetrics(BaseModel):
     discoloration_index: float
     spot_coverage_pct: float
@@ -106,10 +187,9 @@ class PredictionResponse(BaseModel):
     food_category: str
     food_type: str = "food item"
     
-    # Primary Prediction & Confidence Format
-    freshness: str = "Fresh"               # e.g. "Nearly Spoiled"
-    confidence: float = 0.95              # e.g. 0.78
-    all_probabilities: Dict[str, float] = {} # e.g. {"Fresh": 0.15, "Nearly Spoiled": 0.78, "Spoiled": 0.07}
+    freshness: str = "Fresh"
+    confidence: float = 0.95
+    all_probabilities: Dict[str, float] = {}
 
     freshness_status: str
     confidence_score: float
@@ -120,10 +200,8 @@ class PredictionResponse(BaseModel):
     defect_metrics: DefectMetrics
     action_recommendation: str
     
-    # Recipe Suggestions (populated for Nearly Spoiled)
     recipe_suggestions: Optional[List[RecipeSuggestion]] = None
     
-    # Output-Level Verification Flags
     is_uncertain: bool = False
     is_low_confidence: bool = False
     candidate_classes: List[str] = []
@@ -138,6 +216,7 @@ class HistoryItem(BaseModel):
     image_url: str
     original_filename: str
     food_category: str
+    food_type: Optional[str] = "food item"
     freshness_status: str
     confidence_score: float
     shelf_life_days: int
@@ -152,6 +231,10 @@ class HistoryResponse(BaseModel):
     items: List[HistoryItem]
     total: int
 
+class AdminUserDetail(BaseModel):
+    user: AdminUserSummary
+    scans: List[HistoryItem]
+
 class StatsResponse(BaseModel):
     total_scans: int
     fresh_count: int
@@ -160,8 +243,10 @@ class StatsResponse(BaseModel):
     avg_confidence: float
     most_scanned_category: str
 
+# ==============================================================================
+# ANALYTICS SCHEMAS
+# ==============================================================================
 
-# Analytics Schemas
 class StatusCounts(BaseModel):
     Fresh: int
     Nearly_Spoiled: int

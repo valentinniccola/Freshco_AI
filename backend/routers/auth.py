@@ -36,13 +36,20 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
         username=user_data.username,
         email=user_data.email,
         phone_number=user_data.phone_number,
-        hashed_password=hashed_pw
+        hashed_password=hashed_pw,
+        role="user",
+        is_active=True,
+        last_login=datetime.utcnow()
     )
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
 
-    access_token = create_access_token(data={"sub": str(new_user.id), "username": new_user.username})
+    access_token = create_access_token(data={
+        "sub": str(new_user.id),
+        "username": new_user.username,
+        "role": new_user.role
+    })
     return {
         "access_token": access_token,
         "token_type": "bearer",
@@ -62,7 +69,20 @@ def login(login_data: UserLogin, db: Session = Depends(get_db)):
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    access_token = create_access_token(data={"sub": str(user.id), "username": user.username})
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Your account has been deactivated. Please contact an administrator."
+        )
+
+    user.last_login = datetime.utcnow()
+    db.commit()
+
+    access_token = create_access_token(data={
+        "sub": str(user.id),
+        "username": user.username,
+        "role": user.role
+    })
     return {
         "access_token": access_token,
         "token_type": "bearer",
@@ -75,13 +95,8 @@ def get_current_user_profile(current_user: User = Depends(get_current_user)):
 
 @router.post("/forgot-password/request", response_model=PasswordResetResponse)
 def request_password_reset(req: ForgotPasswordRequest, db: Session = Depends(get_db)):
-    """
-    Generates a 6-digit verification code and sends it to the user's email via Gmail SMTP.
-    Rate limited to max 3 requests per email per hour.
-    """
     clean_email = req.email.lower().strip()
 
-    # 1. Verify user exists
     user = db.query(User).filter(User.email == clean_email).first()
     if not user:
         raise HTTPException(
@@ -89,7 +104,6 @@ def request_password_reset(req: ForgotPasswordRequest, db: Session = Depends(get
             detail="No account found with this email address. Please check your email or register."
         )
 
-    # 2. Rate limiting check (max 3 requests per email per hour)
     one_hour_ago = datetime.utcnow() - timedelta(hours=1)
     recent_requests_count = db.query(PasswordResetCode).filter(
         PasswordResetCode.email == clean_email,
@@ -102,13 +116,11 @@ def request_password_reset(req: ForgotPasswordRequest, db: Session = Depends(get
             detail="Too many password reset requests. Please wait a while before requesting a new code."
         )
 
-    # 3. Invalidate any previously active codes for this email
     db.query(PasswordResetCode).filter(
         PasswordResetCode.email == clean_email,
         PasswordResetCode.used == False
     ).update({"used": True})
 
-    # 4. Generate cryptographically secure 6-digit code
     code = f"{secrets.randbelow(900000) + 100000}"
     expires_at = datetime.utcnow() + timedelta(minutes=settings.RESET_CODE_EXPIRE_MINUTES)
 
@@ -121,7 +133,6 @@ def request_password_reset(req: ForgotPasswordRequest, db: Session = Depends(get
     db.add(reset_entry)
     db.commit()
 
-    # 5. Send Email via Gmail SMTP
     sent = EmailService.send_password_reset_code(clean_email, code)
     if not sent:
         if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
@@ -137,9 +148,6 @@ def request_password_reset(req: ForgotPasswordRequest, db: Session = Depends(get
 
 @router.post("/forgot-password/verify-code", response_model=PasswordResetResponse)
 def verify_reset_code(req: VerifyCodeRequest, db: Session = Depends(get_db)):
-    """
-    Step 1 of Password Reset: Verifies the 6-digit code before unlocking the password reset form.
-    """
     clean_email = req.email.lower().strip()
     clean_code = req.code.strip()
 
@@ -170,14 +178,9 @@ def verify_reset_code(req: VerifyCodeRequest, db: Session = Depends(get_db)):
 
 @router.post("/forgot-password/reset", response_model=PasswordResetResponse)
 def reset_password(req: ResetPasswordRequest, db: Session = Depends(get_db)):
-    """
-    Step 2 of Password Reset: Sets the new Bcrypt-hashed password after verification.
-    Invalidates the code immediately (single-use).
-    """
     clean_email = req.email.lower().strip()
     clean_code = req.code.strip()
 
-    # 1. Find matching reset code
     reset_entry = db.query(PasswordResetCode).filter(
         PasswordResetCode.email == clean_email,
         PasswordResetCode.code == clean_code,
@@ -190,7 +193,6 @@ def reset_password(req: ResetPasswordRequest, db: Session = Depends(get_db)):
             detail="Invalid or already used verification code. Please request a new code."
         )
 
-    # 2. Check Expiry
     if reset_entry.expires_at < datetime.utcnow():
         reset_entry.used = True
         db.commit()
@@ -199,7 +201,6 @@ def reset_password(req: ResetPasswordRequest, db: Session = Depends(get_db)):
             detail="Verification code has expired. Please request a new code."
         )
 
-    # 3. Find User
     user = db.query(User).filter(User.email == clean_email).first()
     if not user:
         raise HTTPException(
@@ -207,10 +208,7 @@ def reset_password(req: ResetPasswordRequest, db: Session = Depends(get_db)):
             detail="User account associated with this email was not found."
         )
 
-    # 4. Hash and update new password
     user.hashed_password = get_password_hash(req.new_password)
-    
-    # 5. Invalidate code immediately (single-use)
     reset_entry.used = True
     db.commit()
 

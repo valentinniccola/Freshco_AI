@@ -4,7 +4,7 @@ import {
   CheckCircle, AlertTriangle, AlertOctagon, ArrowUpRight, 
   Layers, Clock, RefreshCw, BarChart3, ShieldCheck, X
 } from 'lucide-react';
-import { historyAPI } from '../services/api';
+import { historyAPI, getImageUrl } from '../services/api';
 
 const HistoryDashboard = ({ onSelectScan }) => {
   const [historyItems, setHistoryItems] = useState([]);
@@ -228,7 +228,7 @@ const HistoryDashboard = ({ onSelectScan }) => {
                   {/* Thumbnail & Header */}
                   <div className="relative rounded-xl overflow-hidden bg-black aspect-video mb-3 flex items-center justify-center">
                     <img
-                      src={item.image_url}
+                      src={getImageUrl(item.image_url)}
                       alt={item.original_filename}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
@@ -297,7 +297,7 @@ const HistoryDashboard = ({ onSelectScan }) => {
 
             <div className="flex items-center space-x-3">
               <img
-                src={selectedItemModal.image_url}
+                src={getImageUrl(selectedItemModal.image_url)}
                 alt={selectedItemModal.original_filename}
                 className="w-16 h-16 rounded-2xl object-cover bg-black border border-slate-200 dark:border-slate-800"
               />

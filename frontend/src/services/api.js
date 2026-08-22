@@ -1,9 +1,22 @@
 import axios from 'axios';
 
+// Base API URL from Vite environment variable (e.g. https://your-backend.vercel.app)
+export const API_URL = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
+
 const API = axios.create({
-  baseURL: '',
-  timeout: 15000, // 15s timeout
+  baseURL: API_URL,
+  timeout: 25000,
 });
+
+// Helper to resolve backend image paths (uploads and sample images) across separate domains
+export const getImageUrl = (path) => {
+  if (!path) return '';
+  if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('blob:') || path.startsWith('data:')) {
+    return path;
+  }
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  return `${API_URL}${cleanPath}`;
+};
 
 // Attach Authorization header if JWT token exists in localStorage
 API.interceptors.request.use(
@@ -24,7 +37,7 @@ API.interceptors.response.use(
     if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
       error.customMessage = 'Request timed out. The server took too long to respond. Please check your connection and retry.';
     } else if (!error.response) {
-      error.customMessage = 'Network error. Unable to reach the server. Please check your network connection.';
+      error.customMessage = 'Network error. Unable to reach the server. Please check your backend URL and network connection.';
     }
     return Promise.reject(error);
   }
@@ -58,6 +71,18 @@ export const historyAPI = {
 
 export const analyticsAPI = {
   getAnalytics: (range = 'week') => API.get('/api/analytics', { params: { range } }),
+};
+
+export const adminAPI = {
+  getStats: () => API.get('/api/admin/stats'),
+  getUsers: (params = {}) => API.get('/api/admin/users', { params }),
+  getUserDetail: (userId) => API.get(`/api/admin/users/${userId}`),
+  toggleUserStatus: (userId, data) => API.patch(`/api/admin/users/${userId}/status`, data),
+  getLogs: (limit = 50) => API.get('/api/admin/logs', { params: { limit } }),
+};
+
+export const agentAPI = {
+  getMultiItemRecipe: (days = 7) => API.post(`/api/agent/recipe-suggestion?days=${days}`),
 };
 
 export default API;

@@ -4,7 +4,7 @@ import {
   RotateCcw, CheckCircle2, ChevronRight, Zap, RefreshCw, Lock, AlertTriangle, 
   Eye, Sun, SwitchCamera, VideoOff, Aperture
 } from 'lucide-react';
-import { predictAPI } from '../services/api';
+import { predictAPI, getImageUrl } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 const FOOD_CATEGORIES = [
@@ -653,7 +653,7 @@ const Scanner = ({ onScanComplete }) => {
                   }`}
                 >
                   <img
-                    src={sample.url}
+                    src={getImageUrl(sample.url)}
                     alt={sample.name}
                     className="w-14 h-14 rounded-lg object-contain bg-white dark:bg-slate-950 p-1 mb-1.5 shadow-sm group-hover:scale-105 transition-transform"
                   />

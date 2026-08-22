@@ -13,10 +13,6 @@ const AuthModal = () => {
   const [password, setPassword] = useState('');
   
   // Forgot Password Flow States
-  // 1: Request Code (Email)
-  // 2: Verify Code (6-Digit OTP only)
-  // 3: Set New Password (Only after code is verified)
-  // 4: Success Screen
   const [forgotStep, setForgotStep] = useState(1);
   const [resetEmail, setResetEmail] = useState('');
   const [resetCode, setResetCode] = useState('');
@@ -62,7 +58,7 @@ const AuthModal = () => {
 
   // Client-side phone number validation
   const validatePhoneNumber = (phone) => {
-    if (!phone || phone.trim() === '') return true; // Optional field
+    if (!phone || phone.trim() === '') return true;
     const cleaned = phone.replace(/[\s\-\(\)\.]/g, '');
     const phoneRegex = /^\+?[0-9]{7,15}$/;
     return phoneRegex.test(cleaned);
@@ -120,7 +116,7 @@ const AuthModal = () => {
       const res = await authAPI.requestPasswordReset({ email: resetEmail });
       setSuccessMessage(res.data.message || 'Verification code sent to your email.');
       setForgotStep(2);
-      setCooldown(60); // 60s cooldown before resend
+      setCooldown(60);
     } catch (err) {
       setError(err.response?.data?.detail || err.customMessage || 'Failed to send verification code. Please check your email.');
     } finally {
@@ -128,7 +124,7 @@ const AuthModal = () => {
     }
   };
 
-  // STEP 2: Handle Verify Code First (Before showing password fields)
+  // STEP 2: Handle Verify Code First
   const handleVerifyCodeOnly = async (e) => {
     e.preventDefault();
     setError('');
@@ -147,7 +143,7 @@ const AuthModal = () => {
         code: cleanCode,
       });
       setSuccessMessage(res.data.message || 'Code verified successfully! Please enter your new password.');
-      setForgotStep(3); // Unlock new password form
+      setForgotStep(3);
     } catch (err) {
       setError(err.response?.data?.detail || err.customMessage || 'Invalid or expired verification code. Please try again.');
     } finally {
@@ -178,7 +174,7 @@ const AuthModal = () => {
         new_password: newPassword,
       });
       setSuccessMessage(res.data.message || 'Password has been reset successfully!');
-      setForgotStep(4); // Success screen
+      setForgotStep(4);
     } catch (err) {
       setError(err.response?.data?.detail || err.customMessage || 'Failed to reset password. Please check your code or request a new one.');
     } finally {
@@ -188,33 +184,30 @@ const AuthModal = () => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in">
-      <div className="relative w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 shadow-2xl shadow-emerald-950/20 dark:shadow-emerald-950/50">
+      <div className="relative w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl shadow-emerald-950/20 dark:shadow-emerald-950/50">
         
         {/* Close Button */}
         <button
           onClick={handleModalClose}
-          className="absolute top-4 right-4 text-slate-400 hover:text-slate-900 dark:hover:text-white p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+          className="absolute top-4 right-4 text-slate-400 hover:text-slate-900 dark:hover:text-white p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
         >
           <X className="w-5 h-5" />
         </button>
 
-        {/* ======================================================== */}
-        {/* FORGOT PASSWORD FLOW (STRICT CODE VERIFICATION FIRST) */}
-        {/* ======================================================== */}
+        {/* FORGOT PASSWORD FLOW */}
         {authMode === 'forgot_password' ? (
           <div>
-            {/* Header */}
             <div className="text-center mb-6">
-              <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 mb-3">
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 mb-3">
                 {forgotStep === 3 ? <ShieldCheck className="w-6 h-6 text-emerald-500" /> : <KeyRound className="w-6 h-6" />}
               </div>
-              <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
+              <h2 className="text-2xl font-black text-slate-900 dark:text-white">
                 {forgotStep === 1 && 'Forgot Password?'}
                 {forgotStep === 2 && 'Verify Email Code'}
                 {forgotStep === 3 && 'Set New Password'}
                 {forgotStep === 4 && 'Password Reset Complete'}
               </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">
                 {forgotStep === 1 && "Enter your email to receive a 6-digit verification code"}
                 {forgotStep === 2 && `Enter the 6-digit code sent to ${resetEmail} to verify your identity`}
                 {forgotStep === 3 && 'Identity verified! Please choose your new password'}
@@ -222,7 +215,6 @@ const AuthModal = () => {
               </p>
             </div>
 
-            {/* Error Message */}
             {error && (
               <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0 text-rose-500 dark:text-rose-400" />
@@ -230,7 +222,6 @@ const AuthModal = () => {
               </div>
             )}
 
-            {/* Success Message */}
             {successMessage && forgotStep !== 4 && (
               <div className="mb-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500 dark:text-emerald-400" />
@@ -238,7 +229,6 @@ const AuthModal = () => {
               </div>
             )}
 
-            {/* STEP 1: Request Code */}
             {forgotStep === 1 && (
               <form onSubmit={handleRequestCode} className="space-y-4">
                 <div>
@@ -263,7 +253,7 @@ const AuthModal = () => {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-600 dark:hover:bg-emerald-400 text-white dark:text-slate-950 font-bold text-sm shadow-lg shadow-emerald-500/25 flex items-center justify-center space-x-2 transition-all disabled:opacity-50 cursor-pointer"
+                  className="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-600 dark:hover:bg-emerald-400 text-white dark:text-slate-950 font-bold text-sm shadow-lg shadow-emerald-500/25 flex items-center justify-center space-x-2 transition-all disabled:opacity-50"
                 >
                   {submitting ? (
                     <>
@@ -291,7 +281,6 @@ const AuthModal = () => {
               </form>
             )}
 
-            {/* STEP 2: Verify Code First */}
             {forgotStep === 2 && (
               <form onSubmit={handleVerifyCodeOnly} className="space-y-4">
                 <div>
@@ -303,7 +292,7 @@ const AuthModal = () => {
                       type="button"
                       disabled={cooldown > 0 || submitting}
                       onClick={handleRequestCode}
-                      className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline disabled:opacity-50 disabled:no-underline font-medium cursor-pointer"
+                      className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline disabled:opacity-50 disabled:no-underline font-medium"
                     >
                       {cooldown > 0 ? `Resend code (${cooldown}s)` : 'Resend code'}
                     </button>
@@ -331,7 +320,7 @@ const AuthModal = () => {
                 <button
                   type="submit"
                   disabled={submitting || resetCode.length !== 6}
-                  className="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-600 dark:hover:bg-emerald-400 text-white dark:text-slate-950 font-bold text-sm shadow-lg shadow-emerald-500/25 flex items-center justify-center space-x-2 transition-all disabled:opacity-50 cursor-pointer"
+                  className="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-600 dark:hover:bg-emerald-400 text-white dark:text-slate-950 font-bold text-sm shadow-lg shadow-emerald-500/25 flex items-center justify-center space-x-2 transition-all disabled:opacity-50"
                 >
                   {submitting ? (
                     <>
@@ -369,10 +358,8 @@ const AuthModal = () => {
               </form>
             )}
 
-            {/* STEP 3: Set New Password (Unlocked only after code verification) */}
             {forgotStep === 3 && (
               <form onSubmit={handleSetNewPassword} className="space-y-4">
-                {/* Verified Identity Badge */}
                 <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
@@ -427,7 +414,7 @@ const AuthModal = () => {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-600 dark:hover:bg-emerald-400 text-white dark:text-slate-950 font-bold text-sm shadow-lg shadow-emerald-500/25 flex items-center justify-center space-x-2 transition-all disabled:opacity-50 cursor-pointer"
+                  className="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-600 dark:hover:bg-emerald-400 text-white dark:text-slate-950 font-bold text-sm shadow-lg shadow-emerald-500/25 flex items-center justify-center space-x-2 transition-all disabled:opacity-50"
                 >
                   {submitting ? (
                     <>
@@ -441,7 +428,6 @@ const AuthModal = () => {
               </form>
             )}
 
-            {/* STEP 4: Success Screen */}
             {forgotStep === 4 && (
               <div className="text-center py-4 space-y-4">
                 <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto">
@@ -460,10 +446,10 @@ const AuthModal = () => {
                   onClick={() => {
                     const savedEmail = resetEmail;
                     resetFormState();
-                    setUsername(savedEmail); // pre-fill email
+                    setUsername(savedEmail);
                     setAuthMode('login');
                   }}
-                  className="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-600 dark:hover:bg-emerald-400 text-white dark:text-slate-950 font-bold text-sm shadow-lg shadow-emerald-500/25 transition-all cursor-pointer"
+                  className="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-600 dark:hover:bg-emerald-400 text-white dark:text-slate-950 font-bold text-sm shadow-lg shadow-emerald-500/25 transition-all"
                 >
                   Sign In Now
                 </button>
@@ -471,26 +457,22 @@ const AuthModal = () => {
             )}
           </div>
         ) : (
-          /* ======================================================== */
           /* STANDARD LOGIN & REGISTRATION FORM */
-          /* ======================================================== */
           <div>
-            {/* Modal Header */}
             <div className="text-center mb-6">
-              <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 mb-3">
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 mb-3">
                 <Sparkles className="w-6 h-6" />
               </div>
-              <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
+              <h2 className="text-2xl font-black text-slate-900 dark:text-white">
                 {authMode === 'login' ? 'Welcome to Freshco AI' : 'Create an Account'}
               </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">
                 {authMode === 'login'
                   ? 'Sign in to save and sync your food freshness scan records'
                   : 'Register to unlock personalized freshness logs and analytics'}
               </p>
             </div>
 
-            {/* Error Alert */}
             {error && (
               <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0 text-rose-500 dark:text-rose-400" />
@@ -500,7 +482,6 @@ const AuthModal = () => {
 
             {/* Form */}
             <form onSubmit={handleAuthSubmit} className="space-y-4">
-              {/* Username / Username or Email */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                   {authMode === 'login' ? 'Username or Email' : 'Username'}
@@ -520,7 +501,6 @@ const AuthModal = () => {
                 </div>
               </div>
 
-              {/* Email Address (Register only) */}
               {authMode === 'register' && (
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
@@ -542,7 +522,6 @@ const AuthModal = () => {
                 </div>
               )}
 
-              {/* Phone Number Field (Register only, Optional with Validation) */}
               {authMode === 'register' && (
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
@@ -568,7 +547,6 @@ const AuthModal = () => {
                 </div>
               )}
 
-              {/* Password */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
@@ -584,7 +562,7 @@ const AuthModal = () => {
                         setForgotStep(1);
                         setAuthMode('forgot_password');
                       }}
-                      className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline font-medium cursor-pointer"
+                      className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline font-medium"
                     >
                       Forgot Password?
                     </button>
@@ -605,11 +583,10 @@ const AuthModal = () => {
                 </div>
               </div>
 
-              {/* Submit Button */}
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-600 dark:hover:bg-emerald-400 text-white dark:text-slate-950 font-bold text-sm shadow-lg shadow-emerald-500/25 flex items-center justify-center space-x-2 transition-all disabled:opacity-50 cursor-pointer"
+                className="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-600 dark:hover:bg-emerald-400 text-white dark:text-slate-950 font-bold text-sm shadow-lg shadow-emerald-500/25 flex items-center justify-center space-x-2 transition-all disabled:opacity-50"
               >
                 {submitting ? (
                   <>
@@ -622,7 +599,6 @@ const AuthModal = () => {
               </button>
             </form>
 
-            {/* Toggle Mode Footer */}
             <div className="mt-6 text-center text-xs text-slate-500 dark:text-slate-400 border-t border-slate-200 dark:border-slate-800/80 pt-4">
               {authMode === 'login' ? (
                 <p>
@@ -632,7 +608,7 @@ const AuthModal = () => {
                       resetFormState();
                       setAuthMode('register');
                     }}
-                    className="text-emerald-600 dark:text-emerald-400 hover:underline font-semibold cursor-pointer"
+                    className="text-emerald-600 dark:text-emerald-400 hover:underline font-semibold"
                   >
                     Register now
                   </button>
@@ -645,7 +621,7 @@ const AuthModal = () => {
                       resetFormState();
                       setAuthMode('login');
                     }}
-                    className="text-emerald-600 dark:text-emerald-400 hover:underline font-semibold cursor-pointer"
+                    className="text-emerald-600 dark:text-emerald-400 hover:underline font-semibold"
                   >
                     Sign In
                   </button>

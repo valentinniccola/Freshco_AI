@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
+import { getImageUrl } from '../services/api';
+
 const ResultCard = ({ result, onReset, onViewHistory }) => {
   if (!result) return null;
 
@@ -149,7 +151,7 @@ const ResultCard = ({ result, onReset, onViewHistory }) => {
             {/* Food Image Preview */}
             <div className="relative rounded-2xl overflow-hidden bg-black border border-slate-300 dark:border-slate-800 aspect-square flex items-center justify-center mb-6">
               <img
-                src={result.image_url}
+                src={getImageUrl(result.image_url)}
                 alt={result.original_filename}
                 className="w-full h-full object-cover"
               />
