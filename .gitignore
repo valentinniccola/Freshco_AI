@@ -23,6 +23,11 @@ pip-delete-this-directory.txt
 food_type_training_log.txt
 training_log.txt
 
+# User uploaded test images
+backend/uploads/*
+!backend/uploads/.gitkeep
+sample_uploads/
+
 # OS & IDE files
 .DS_Store
 Thumbs.db
